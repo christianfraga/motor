@@ -27,7 +27,7 @@ def calcular_metricas(datos, pesos_dict, anos=10, tasa_libre_riesgo=0.04):
     fecha_inicial = fecha_final - pd.DateOffset(years=anos)
     datos_periodo = datos[datos.index >= fecha_inicial]
 
-    # Calcular retornos aislando solo los días donde todos los activos seleccionados existen
+    # Calcular retornos aislando solo los días donde todos los activos existen
     retornos = datos_periodo.pct_change().dropna(how='any')
     
     dias_comunes_reales = len(retornos)
