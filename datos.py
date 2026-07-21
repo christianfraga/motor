@@ -6,7 +6,7 @@ import requests
 @st.cache_data(ttl=3600, show_spinner=False)
 def buscar_activos_yahoo_api(query):
     """Busca tickers y nombres de empresas en milisegundos."""
-    if not query or len(query) < 2:
+    if not query or len(query) < 2: 
         return []
     try:
         url = f"https://query2.finance.yahoo.com/v1/finance/search?q={query}&quotesCount=5"
@@ -20,38 +20,33 @@ def buscar_activos_yahoo_api(query):
             if ticker:
                 resultados.append({"ticker": ticker.upper(), "label": f"{ticker} - {nombre} ({mercado})"})
         return resultados
-    except Exception:
+    except Exception: 
         return []
 
 @st.cache_data(ttl=600, show_spinner=False)
 def obtener_precios_recientes(tickers):
-    """Descarga solo los últimos días para mostrar el precio nominal en las tarjetas."""
-    if not tickers:
+    """Descarga solo los últimos días para mostrar el precio en las tarjetas."""
+    if not tickers: 
         return {}
     try:
         datos = yf.download(tickers, period="5d", progress=False)['Close']
         if isinstance(datos, pd.Series):
             datos = datos.to_frame(name=tickers[0])
-        # Rellenar hacia adelante para capturar el último cierre válido y evitar NaNs de hoy
-        return datos.ffill().iloc[-1].to_dict()
+        return datos.iloc[-1].to_dict()
     except Exception:
         return {t: 0.0 for t in tickers}
 
 @st.cache_data(ttl=86400, show_spinner=False)
 def descargar_datos_seguros(tickers, anos=10):
-    """Descarga la historia completa ajustada para las matemáticas del motor."""
-    if not tickers:
+    """Descarga la historia completa para las matemáticas del motor."""
+    if not tickers: 
         return pd.DataFrame()
     try:
-        # SOLUCIÓN: auto_adjust=True ajusta los dividendos y splits directamente en 'Close'
-        # Esto evita que yfinance colapse al buscar columnas inexistentes.
-        datos = yf.download(tickers, period="max", auto_adjust=True, progress=False)['Close']
-        
-        if isinstance(datos, pd.Series):
+        datos = yf.download(tickers, period=f"{anos}y", progress=False)['Close']
+        if isinstance(datos, pd.Series): 
             datos = datos.to_frame(name=tickers[0])
-            
         datos = datos.dropna(axis=1, how='all')
-        datos = datos.ffill()
+        datos = datos.ffill().bfill()
         return datos
     except Exception:
         return pd.DataFrame()
