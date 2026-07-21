@@ -2,8 +2,6 @@ import streamlit as st
 import pandas as pd
 import motor
 import plotly.express as px
-import calculadora_sharpe as calc
-import dd_motor as dd_calc  # <-- NUEVA IMPORTACIÓN
 from datos import buscar_activos_yahoo_api, obtener_precios_recientes, descargar_datos_seguros
 
 # --- CONFIGURACIÓN DE PÁGINA ---
@@ -119,7 +117,6 @@ if st.session_state.mi_portafolio:
             st.session_state.mi_portafolio = {
                 "MSFT": 4.0, "META": 3.0, "GOOGL": 2.0, "AMZN": 2.0, "AXP": 1.0
             }
-            # Aseguramos que los nombres estén en memoria
             st.session_state.nombres_activos.update({
                 "MSFT": "Microsoft Corporation", "META": "Meta Platforms", 
                 "GOOGL": "Alphabet Inc.", "AMZN": "Amazon.com", "AXP": "American Express"
@@ -131,7 +128,6 @@ if st.session_state.mi_portafolio:
             st.session_state.mi_portafolio = {
                 "VOO": 8.0, "SCHD": 31.0, "BND": 14.0, "GLD": 4.0, "MSFT": 2.0, "GOOGL": 4.0
             }
-            # Aseguramos que los nombres estén en memoria
             st.session_state.nombres_activos.update({
                 "VOO": "Vanguard S&P 500 ETF", "SCHD": "Schwab US Dividend Equity ETF", 
                 "BND": "Vanguard Total Bond Market ETF", "GLD": "SPDR Gold Trust",
@@ -172,56 +168,45 @@ if st.session_state.mi_portafolio:
             
             for ventana, tab in {2: tab2, 5: tab5, 10: tab10}.items():
                 with tab:
-                    rend, vol, corr = motor.calcular_metricas(datos=df_historico, pesos_dict=pesos_monetarios, anos=ventana)
+                    # EXTRAEMOS LAS 5 MÉTRICAS DIRECTAMENTE DEL MOTOR
+                    rend, vol, corr, max_dd, sharpe = motor.calcular_metricas(
+                        datos=df_historico, 
+                        pesos_dict=pesos_monetarios, 
+                        anos=ventana, 
+                        tasa_libre_riesgo=rf_decimal
+                    )
                     
                     if rend is not None and vol is not None:
-                        # 1. Cálculo de Sharpe
-                        sharpe = calc.calcular_sharpe(cagr=rend, volatilidad=vol, tasa_libre_riesgo=rf_decimal)
-                        
-                        # Asignación de colores para Sharpe (Rojo, Blanco, Verde, Azul)
+                        # Colores Sharpe
                         if sharpe < 0.50: color_sh = "#ff4b4b"      # Rojo
-                        elif sharpe < 1.00: color_sh = "gray"      # Blanco
+                        elif sharpe < 1.00: color_sh = "gray"       # Blanco/Gris
                         elif sharpe < 2.00: color_sh = "#21c354"    # Verde
                         else: color_sh = "#1c83e1"                  # Azul
 
-                        # 2. Cálculo de Drawdown para esta ventana temporal
-                        fecha_final = df_historico.index.max()
-                        fecha_inicial = fecha_final - pd.DateOffset(years=ventana)
-                        datos_periodo = df_historico[df_historico.index >= fecha_inicial]
-                        
-                        # Curva de valor diario
-                        valor_diario = sum([datos_periodo[t] * st.session_state.mi_portafolio[t] for t in mis_tickers])
-                        max_dd = dd_calc.calcular_max_drawdown(valor_diario)
-                        
-                        # Asignación de colores para Drawdown (Rojo, Blanco, Verde, Azul)
+                        # Colores Drawdown
                         caida_pct = abs(max_dd) * 100
                         if caida_pct <= 10.0: color_dd = "#21c354"   # Verde
-                        elif caida_pct <= 20.0: color_dd = "gray"    # Blanco
-                        elif caida_pct <= 35.0: color_dd = "#ff4b4b"  # Rojo
-                        else: color_dd = "#ff4b4b"                    # Azul
+                        elif caida_pct <= 20.0: color_dd = "gray"    # Blanco/Gris
+                        else: color_dd = "#ff4b4b"                  # Rojo
 
                         with st.container(border=True):
-                            # Ampliamos a 5 columnas
                             m1, m2, m3, m4, m5 = st.columns(5)
                             
-                            # CAGR y Volatilidad estándar (texto blanco por defecto en modo oscuro)
                             m1.metric(label="Rendimiento", value=f"{rend * 100:.2f}%")
                             m2.metric(label="Volatilidad", value=f"{vol * 100:.2f}%")
                             
-                            # Correlación estándar
                             if len(mis_tickers) > 1 and corr is not None:
                                 m3.metric(label="Correlación", value=f"{corr:.2f}")
                             else:
                                 m3.info(">1 activo")
                                 
-                            # Métricas con colores personalizados usando HTML
                             estilo_label = "font-size: 14px; color: rgb(163, 168, 184); margin-bottom: 0px;"
                             estilo_valor = "font-size: 1.8rem; font-weight: 600; line-height: 1.2;"
 
                             m4.markdown(f"<div style='{estilo_label}'>Sharpe</div><div style='{estilo_valor} color: {color_sh};'>{sharpe:.2f}</div>", unsafe_allow_html=True)
                             m5.markdown(f"<div style='{estilo_label}'>Max Drawdown</div><div style='{estilo_valor} color: {color_dd};'>{max_dd * 100:.2f}%</div>", unsafe_allow_html=True)
 
-                        # --- Dictamen Analítico Reducido ---
+                        # --- Dictamen Analítico ---
                         st.markdown("#### 🧠 Dictamen Analítico")
                         if len(mis_tickers) > 1 and corr is not None:
                             if corr > 0.70:

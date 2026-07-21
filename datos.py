@@ -25,7 +25,7 @@ def buscar_activos_yahoo_api(query):
 
 @st.cache_data(ttl=600, show_spinner=False)
 def obtener_precios_recientes(tickers):
-    """Descarga solo los últimos días para mostrar el precio en las tarjetas."""
+    """Descarga solo los últimos días para mostrar el precio nominal en las tarjetas."""
     if not tickers:
         return {}
     try:
@@ -39,15 +39,18 @@ def obtener_precios_recientes(tickers):
 
 @st.cache_data(ttl=86400, show_spinner=False)
 def descargar_datos_seguros(tickers, anos=10):
-    """Descarga la historia completa para las matemáticas del motor."""
+    """Descarga la historia completa ajustada para las matemáticas del motor."""
     if not tickers:
         return pd.DataFrame()
     try:
-        datos = yf.download(tickers, period="max", progress=False)['Close']
+        # SOLUCIÓN: auto_adjust=True ajusta los dividendos y splits directamente en 'Close'
+        # Esto evita que yfinance colapse al buscar columnas inexistentes.
+        datos = yf.download(tickers, period="max", auto_adjust=True, progress=False)['Close']
+        
         if isinstance(datos, pd.Series):
             datos = datos.to_frame(name=tickers[0])
+            
         datos = datos.dropna(axis=1, how='all')
-        # SOLUCIÓN: Eliminamos bfill() para no inventar historial previo al IPO de un activo
         datos = datos.ffill()
         return datos
     except Exception:
