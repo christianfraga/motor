@@ -7,13 +7,16 @@ from datos import buscar_activos_yahoo_api, obtener_precios_recientes, descargar
 # --- CONFIGURACIÓN DE PÁGINA ---
 st.set_page_config(page_title="Terminal de Diagnóstico Financiero", page_icon="📈", layout="wide")
 
-# --- MEMORIA INICIAL ---
+# --- MEMORIA INICIAL (AHORA INICIA CON EL OPTIMIZADO) ---
 if 'mi_portafolio' not in st.session_state: 
-    st.session_state.mi_portafolio = {"MSFT": 4.0, "META": 3.0, "GOOGL": 2.0, "AMZN": 2.0, "AXP": 1.0}
+    st.session_state.mi_portafolio = {
+        "VOO": 8.0, "SCHD": 31.0, "BND": 14.0, "GLD": 4.0, "MSFT": 2.0, "GOOGL": 4.0
+    }
 if 'nombres_activos' not in st.session_state: 
     st.session_state.nombres_activos = {
-        "MSFT": "Microsoft Corporation", "META": "Meta Platforms", "GOOGL": "Alphabet Inc.",
-        "AMZN": "Amazon.com", "AXP": "American Express" 
+        "VOO": "Vanguard S&P 500 ETF", "SCHD": "Schwab US Dividend Equity ETF", 
+        "BND": "Vanguard Total Bond Market ETF", "GLD": "SPDR Gold Trust",
+        "MSFT": "Microsoft Corporation", "GOOGL": "Alphabet Inc."
     }
 
 st.title("📈 Diagnóstico Estratégico de Portafolio") 
@@ -110,20 +113,9 @@ if st.session_state.mi_portafolio:
     st.subheader("2.1 Cargar Portafolio Guardado")
     st.caption("Sobrescribe tu portafolio actual con plantillas rápidas.")
     
-    col_btn1, col_btn2, _ = st.columns([1, 1, 4])
+    col_btn1, col_btn2, _ = st.columns([1, 1.5, 3.5])
     
     with col_btn1:
-        if st.button("👤 Christian", use_container_width=True):
-            st.session_state.mi_portafolio = {
-                "MSFT": 4.0, "META": 3.0, "GOOGL": 2.0, "AMZN": 2.0, "AXP": 1.0
-            }
-            st.session_state.nombres_activos.update({
-                "MSFT": "Microsoft Corporation", "META": "Meta Platforms", 
-                "GOOGL": "Alphabet Inc.", "AMZN": "Amazon.com", "AXP": "American Express"
-            })
-            st.rerun()
-            
-    with col_btn2:
         if st.button("⚡ Optimizado", use_container_width=True):
             st.session_state.mi_portafolio = {
                 "VOO": 8.0, "SCHD": 31.0, "BND": 14.0, "GLD": 4.0, "MSFT": 2.0, "GOOGL": 4.0
@@ -134,6 +126,26 @@ if st.session_state.mi_portafolio:
                 "MSFT": "Microsoft Corporation", "GOOGL": "Alphabet Inc."
             })
             st.rerun()
+            
+    with col_btn2:
+        with st.expander("👤 Portafolio Christian"):
+            # PUEDES CAMBIAR LA CONTRASEÑA AQUÍ:
+            contrasenia_correcta = "12345casio" 
+            
+            pwd = st.text_input("Ingresa tu contraseña:", type="password", key="pass_chris")
+            
+            if st.button("Desbloquear y Cargar", use_container_width=True):
+                if pwd == contrasenia_correcta:
+                    st.session_state.mi_portafolio = {
+                        "MSFT": 4.0, "META": 3.0, "GOOGL": 2.0, "AMZN": 2.0, "AXP": 1.0
+                    }
+                    st.session_state.nombres_activos.update({
+                        "MSFT": "Microsoft Corporation", "META": "Meta Platforms", 
+                        "GOOGL": "Alphabet Inc.", "AMZN": "Amazon.com", "AXP": "American Express"
+                    })
+                    st.rerun()
+                elif pwd != "":
+                    st.error("Contraseña incorrecta ❌")
             
     st.write("")
     st.divider()
@@ -168,7 +180,7 @@ if st.session_state.mi_portafolio:
             
             for ventana, tab in {2: tab2, 5: tab5, 10: tab10}.items():
                 with tab:
-                    # EXTRAEMOS LAS 5 MÉTRICAS DIRECTAMENTE DEL MOTOR
+                    # Llama al motor pasando correctamente la tasa libre de riesgo
                     rend, vol, corr, max_dd, sharpe = motor.calcular_metricas(
                         datos=df_historico, 
                         pesos_dict=pesos_monetarios, 
@@ -179,14 +191,14 @@ if st.session_state.mi_portafolio:
                     if rend is not None and vol is not None:
                         # Colores Sharpe
                         if sharpe < 0.50: color_sh = "#ff4b4b"      # Rojo
-                        elif sharpe < 1.00: color_sh = "gray"       # Blanco/Gris
+                        elif sharpe < 1.00: color_sh = "gray"       # Gris
                         elif sharpe < 2.00: color_sh = "#21c354"    # Verde
                         else: color_sh = "#1c83e1"                  # Azul
 
                         # Colores Drawdown
                         caida_pct = abs(max_dd) * 100
                         if caida_pct <= 10.0: color_dd = "#21c354"   # Verde
-                        elif caida_pct <= 20.0: color_dd = "gray"    # Blanco/Gris
+                        elif caida_pct <= 20.0: color_dd = "gray"    # Gris
                         else: color_dd = "#ff4b4b"                  # Rojo
 
                         with st.container(border=True):
